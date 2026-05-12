@@ -1,0 +1,612 @@
+---
+layout: null
+permalink: /dream-machine/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#000000" />
+<title>Dream Machine — Brion Gysin Flicker</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --fg: #f4ecd8;
+    --accent: #d4a04a;
+    --muted: #8a8275;
+    --panel: rgba(10, 10, 10, 0.78);
+    --border: rgba(244, 236, 216, 0.18);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  #flicker {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 1;
+    will-change: background-color, opacity;
+  }
+
+  #ui {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  #ui.hidden .panel,
+  #ui.hidden .top-bar { opacity: 0; pointer-events: none; }
+
+  .panel, .top-bar {
+    transition: opacity 0.4s ease;
+    pointer-events: auto;
+  }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 28px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0));
+  }
+
+  .title {
+    font-family: "Times New Roman", Georgia, serif;
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .title small {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .icon-btn {
+    background: rgba(244, 236, 216, 0.08);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn + .icon-btn { margin-left: 10px; }
+
+  .panel {
+    margin-top: auto;
+    background: var(--panel);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid var(--border);
+    padding: 28px 40px 36px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .freq-display {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 220px;
+  }
+  .freq-number {
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 88px;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .freq-unit {
+    font-size: 20px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .band-label {
+    margin-top: 4px;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .band-label .band-name { color: var(--fg); }
+
+  .slider-wrap {
+    flex: 1 1 360px;
+    min-width: 260px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 44px;
+    background: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: linear-gradient(90deg, #3a3a45, #5a5566, #d4a04a);
+    border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: -16px;
+    box-shadow: 0 0 18px rgba(212, 160, 74, 0.55);
+    border: 2px solid #f4ecd8;
+  }
+
+  .presets {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .preset {
+    background: rgba(244, 236, 216, 0.05);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 14px 8px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .preset.active {
+    background: rgba(212, 160, 74, 0.18);
+    border-color: var(--accent);
+  }
+  .preset .name {
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .preset .hz {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  .big-btn {
+    background: var(--accent);
+    color: #1a1206;
+    border: none;
+    padding: 18px 36px;
+    font-size: 16px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(212, 160, 74, 0.35);
+    min-width: 180px;
+  }
+  .big-btn.stop {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .swatches { display: flex; gap: 8px; }
+  .swatch {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+  }
+  .swatch.active { border-color: var(--accent); }
+
+  .duty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+  }
+  .duty input[type="range"] { height: 32px; flex: 1; }
+  .duty input[type="range"]::-webkit-slider-thumb {
+    width: 24px; height: 24px; margin-top: -10px;
+  }
+
+  /* Splash / consent overlay */
+  #splash {
+    position: fixed; inset: 0; z-index: 10;
+    background: radial-gradient(ellipse at center, #1a1208 0%, #000 70%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+  #splash h1 {
+    font-family: "Times New Roman", Georgia, serif;
+    font-weight: 400;
+    font-size: 56px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 4px;
+  }
+  #splash .sub {
+    font-size: 13px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 40px;
+  }
+  #splash .quote {
+    max-width: 620px;
+    font-family: "Times New Roman", Georgia, serif;
+    font-style: italic;
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--fg);
+    margin-bottom: 36px;
+  }
+  #splash .quote cite {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+  }
+  .warning {
+    max-width: 560px;
+    border: 1px solid rgba(212, 160, 74, 0.4);
+    background: rgba(212, 160, 74, 0.06);
+    padding: 18px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--fg);
+    margin-bottom: 32px;
+  }
+  .warning strong { color: var(--accent); letter-spacing: 0.15em; }
+
+  #splash .enter {
+    background: var(--accent);
+    color: #1a1206;
+    border: none;
+    padding: 20px 56px;
+    font-size: 15px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .hint {
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .hint.show { opacity: 1; }
+
+  @media (max-width: 820px) {
+    .freq-number { font-size: 64px; }
+    .presets { grid-template-columns: repeat(3, 1fr); }
+    #splash h1 { font-size: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <h1>Dream Machine</h1>
+  <div class="sub">After Brion Gysin &amp; Ian Sommerville · 1959</div>
+  <div class="quote">
+    "Subjects experienced bursts of colour, complex patterns, dreamlike scenes — visions only the dreamer can see."
+    <cite>— Brion Gysin</cite>
+  </div>
+  <div class="warning">
+    <strong>WARNING.</strong>
+    Flickering light may trigger seizures in people with photosensitive epilepsy.
+    Do not use if you are pregnant, on medication that lowers seizure threshold,
+    sleep-deprived, or under the influence. View with your <em>eyes closed</em>
+    for the intended effect. Stop immediately if you feel unwell.
+  </div>
+  <button class="enter" id="enterBtn">I Understand · Begin</button>
+</div>
+
+<div id="flicker"></div>
+
+<div class="hint" id="hint">Tap screen to hide controls</div>
+
+<div id="ui">
+  <div class="top-bar">
+    <div class="title">Dream Machine<small>Flicker Entrainment</small></div>
+    <div>
+      <button class="icon-btn" id="fsBtn" title="Fullscreen">⛶</button>
+      <button class="icon-btn" id="hideBtn" title="Hide UI">◐</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="freq-display">
+        <div>
+          <div><span class="freq-number" id="freqNum">10.0</span><span class="freq-unit"> Hz</span></div>
+          <div class="band-label">Band · <span class="band-name" id="bandName">Alpha</span></div>
+        </div>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="freqSlider" min="0.5" max="40" step="0.1" value="10" />
+      </div>
+    </div>
+
+    <div class="presets" id="presets">
+      <button class="preset" data-hz="2"  data-band="Delta"><div class="name">Delta</div><div class="hz">2 Hz · Sleep</div></button>
+      <button class="preset" data-hz="6"  data-band="Theta"><div class="name">Theta</div><div class="hz">6 Hz · Trance</div></button>
+      <button class="preset active" data-hz="10" data-band="Alpha"><div class="name">Alpha</div><div class="hz">10 Hz · Gysin</div></button>
+      <button class="preset" data-hz="18" data-band="Beta"><div class="name">Beta</div><div class="hz">18 Hz · Focus</div></button>
+      <button class="preset" data-hz="40" data-band="Gamma"><div class="name">Gamma</div><div class="hz">40 Hz · Insight</div></button>
+    </div>
+
+    <div class="controls-row">
+      <button class="big-btn" id="playBtn">Start</button>
+      <button class="big-btn stop" id="stopBtn" style="display:none;">Stop</button>
+
+      <div class="opt">
+        <span>Color</span>
+        <div class="swatches" id="swatches">
+          <div class="swatch active" data-color="#ffffff" style="background:#ffffff;"></div>
+          <div class="swatch" data-color="#ffb347" style="background:#ffb347;"></div>
+          <div class="swatch" data-color="#e94e4e" style="background:#e94e4e;"></div>
+          <div class="swatch" data-color="#5ec8ff" style="background:#5ec8ff;"></div>
+          <div class="swatch" data-color="#9b6bff" style="background:#9b6bff;"></div>
+        </div>
+      </div>
+
+      <div class="duty">
+        <span class="opt">Duty</span>
+        <input type="range" id="dutySlider" min="10" max="90" step="1" value="50" />
+        <span id="dutyVal" class="opt" style="min-width:46px;text-align:right;">50%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const flicker   = document.getElementById('flicker');
+  const splash    = document.getElementById('splash');
+  const enterBtn  = document.getElementById('enterBtn');
+  const playBtn   = document.getElementById('playBtn');
+  const stopBtn   = document.getElementById('stopBtn');
+  const slider    = document.getElementById('freqSlider');
+  const freqNum   = document.getElementById('freqNum');
+  const bandName  = document.getElementById('bandName');
+  const presets   = document.getElementById('presets');
+  const swatches  = document.getElementById('swatches');
+  const dutySlider= document.getElementById('dutySlider');
+  const dutyVal   = document.getElementById('dutyVal');
+  const fsBtn     = document.getElementById('fsBtn');
+  const hideBtn   = document.getElementById('hideBtn');
+  const ui        = document.getElementById('ui');
+  const hint      = document.getElementById('hint');
+
+  const state = {
+    frequency: 10.0,
+    duty: 0.5,
+    color: '#ffffff',
+    running: false,
+    on: false,
+    lastToggle: 0,
+    rafId: null,
+    wakeLock: null,
+  };
+
+  function bandFor(hz) {
+    if (hz < 4)  return 'Delta';
+    if (hz < 8)  return 'Theta';
+    if (hz < 13) return 'Alpha';
+    if (hz < 30) return 'Beta';
+    return 'Gamma';
+  }
+
+  function updateFreqDisplay() {
+    freqNum.textContent = state.frequency.toFixed(1);
+    bandName.textContent = bandFor(state.frequency);
+    [...presets.children].forEach(btn => {
+      btn.classList.toggle('active', parseFloat(btn.dataset.hz) === state.frequency);
+    });
+  }
+
+  function setFrequency(hz, fromSlider) {
+    state.frequency = Math.max(0.5, Math.min(40, hz));
+    if (!fromSlider) slider.value = state.frequency;
+    updateFreqDisplay();
+  }
+
+  slider.addEventListener('input', e => setFrequency(parseFloat(e.target.value), true));
+
+  presets.addEventListener('click', e => {
+    const btn = e.target.closest('.preset');
+    if (!btn) return;
+    setFrequency(parseFloat(btn.dataset.hz), false);
+  });
+
+  swatches.addEventListener('click', e => {
+    const sw = e.target.closest('.swatch');
+    if (!sw) return;
+    state.color = sw.dataset.color;
+    [...swatches.children].forEach(s => s.classList.toggle('active', s === sw));
+    if (state.running && state.on) flicker.style.background = state.color;
+  });
+
+  dutySlider.addEventListener('input', e => {
+    state.duty = parseInt(e.target.value, 10) / 100;
+    dutyVal.textContent = e.target.value + '%';
+  });
+
+  function tick(now) {
+    if (!state.running) return;
+    const periodMs = 1000 / state.frequency;
+    const onMs  = periodMs * state.duty;
+    const offMs = periodMs - onMs;
+    const elapsed = now - state.lastToggle;
+    const target = state.on ? onMs : offMs;
+    if (elapsed >= target) {
+      state.on = !state.on;
+      state.lastToggle = now;
+      flicker.style.background = state.on ? state.color : '#000';
+    }
+    state.rafId = requestAnimationFrame(tick);
+  }
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        state.wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (err) { /* ignore */ }
+  }
+
+  function releaseWakeLock() {
+    if (state.wakeLock) {
+      state.wakeLock.release().catch(() => {});
+      state.wakeLock = null;
+    }
+  }
+
+  function start() {
+    if (state.running) return;
+    state.running = true;
+    state.on = false;
+    state.lastToggle = performance.now();
+    playBtn.style.display = 'none';
+    stopBtn.style.display = '';
+    requestWakeLock();
+    state.rafId = requestAnimationFrame(tick);
+    showHint();
+    setTimeout(() => ui.classList.add('hidden'), 1800);
+  }
+
+  function stop() {
+    state.running = false;
+    if (state.rafId) cancelAnimationFrame(state.rafId);
+    flicker.style.background = '#000';
+    playBtn.style.display = '';
+    stopBtn.style.display = 'none';
+    releaseWakeLock();
+    ui.classList.remove('hidden');
+  }
+
+  playBtn.addEventListener('click', start);
+  stopBtn.addEventListener('click', stop);
+
+  enterBtn.addEventListener('click', () => {
+    splash.style.display = 'none';
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+
+  fsBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  hideBtn.addEventListener('click', () => ui.classList.toggle('hidden'));
+
+  // Tap on flicker area toggles UI when running
+  flicker.addEventListener('click', () => {
+    if (state.running) ui.classList.toggle('hidden');
+  });
+
+  // Re-acquire wake lock on visibility change
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.running) requestWakeLock();
+  });
+
+  function showHint() {
+    hint.classList.add('show');
+    setTimeout(() => hint.classList.remove('show'), 2400);
+  }
+
+  // Prevent double-tap zoom on iPad
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => e.preventDefault());
+
+  updateFreqDisplay();
+})();
+</script>
+</body>
+</html>
